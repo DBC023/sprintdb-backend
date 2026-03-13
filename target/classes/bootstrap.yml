@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: test21
+  cloud:
+    config:
+      url: http://localhost:8080
