@@ -1,9 +1,7 @@
 spring:
-  application:
-    name: sprintdb
   datasource:
-    # Agregamos 'jdbc:' al inicio de la URL maestra de Railway
-    url: jdbc:${DATABASE_URL}
+    # Construimos la URL manualmente para evitar errores de parseo
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
     username: ${PGUSER}
     password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
