@@ -17,4 +17,4 @@ spring:
 server:
   port: ${PORT:8790}
   servlet:
-    context-path: /sprintdb/api
+    context-path: /sprintdb
