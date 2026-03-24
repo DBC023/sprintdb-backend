@@ -2,10 +2,11 @@ spring:
   application:
     name: sprintdb
   datasource:
-      url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
-      username: ${PGUSER}
-      password: ${PGPASSWORD}
-      driver-class-name: org.postgresql.Driver
+    # Agregamos 'jdbc:' al inicio de la URL maestra de Railway
+    url: jdbc:${DATABASE_URL}
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
