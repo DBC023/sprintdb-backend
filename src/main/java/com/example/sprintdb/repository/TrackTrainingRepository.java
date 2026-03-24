@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface TrackTrainingRepository extends JpaRepository<TrackTraining, Long> {
-    // Ejemplo: buscar por distancia específica
+    // Buscar por distancia específica
     List<TrackTraining> findByAthleteIdAndDistanceMeters(Long athleteId, Integer distance);
 }

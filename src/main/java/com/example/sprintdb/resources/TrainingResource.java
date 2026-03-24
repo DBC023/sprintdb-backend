@@ -1,6 +1,7 @@
 package com.example.sprintdb.resources;
 
 import com.example.sprintdb.dto.GymTrainingDTO;
+import com.example.sprintdb.dto.ReplicationDTO;
 import com.example.sprintdb.dto.TrackTrainingDTO;
 import com.example.sprintdb.services.TrainingService;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,13 @@ public class TrainingResource {
         return new ResponseEntity<>(trainingService.createTrack(dto), HttpStatus.CREATED);
     }
 
-    // --- READ (Historial completo del atleta) ---
+    @PostMapping("/replicate/{id}")
+    public ResponseEntity<Void> replicate(@PathVariable Long id, @RequestBody List<ReplicationDTO> copies) {
+        trainingService.replicate(id, copies);
+        return ResponseEntity.ok().build();
+    }
+
+    // --- READ (Athlete complete history) ---
 
     @GetMapping("/athlete/{athleteId}")
     public ResponseEntity<List<Object>> getHistory(@PathVariable Long athleteId) {
@@ -38,7 +45,13 @@ public class TrainingResource {
         return ResponseEntity.ok(trainingService.listAllByAthlete(athleteId));
     }
 
-    // --- UPDATE (Especializados) ---
+    // --- READ (Exercises Search) ---
+    @GetMapping("/search-exercises")
+    public ResponseEntity<List<String>> search(@RequestParam String q) {
+        return ResponseEntity.ok(trainingService.searchDescription(q));
+    }
+
+    // --- UPDATE (Specialized) ---
 
     @PutMapping("/gym/{id}")
     public ResponseEntity<GymTrainingDTO> updateGym(@PathVariable Long id, @RequestBody GymTrainingDTO dto) {

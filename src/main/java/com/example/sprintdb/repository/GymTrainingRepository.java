@@ -8,7 +8,6 @@ import java.util.List;
 
 @Repository
 public interface GymTrainingRepository extends JpaRepository<GymTraining, Long> {
-    // Aquí podrías agregar métodos específicos de gym en el futuro,
-    // como buscar entrenamientos con un peso mayor a X.
+    // buscar entrenamientos con un peso mayor a X.
     List<GymTraining> findByAthleteIdAndWeightGreaterThan(Long athleteId, java.math.BigDecimal weight);
 }

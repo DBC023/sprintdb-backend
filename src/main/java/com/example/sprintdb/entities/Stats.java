@@ -18,7 +18,7 @@ public class Stats {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Integer rpe; // scale 1-10
+    private Integer rpe; // escala 1-10
 
     @Column(length = 500)
     private String observations;

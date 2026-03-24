@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface CoachRepository extends JpaRepository<Coach, Long> {
-    // Método personalizado: Buscar entrenadores por su especialidad (ej. "Velocidad")
+    // Buscar entrenador por especialidad
     List<Coach> findBySpecialityContainingIgnoreCase(String speciality);
 }

@@ -1,14 +1,8 @@
 package com.example.sprintdb.services;
 
-import com.example.sprintdb.dto.GymTrainingDTO;
-import com.example.sprintdb.dto.StatsDTO;
-import com.example.sprintdb.dto.TrackTrainingDTO;
-import com.example.sprintdb.dto.TrainingDTO;
+import com.example.sprintdb.dto.*;
 import com.example.sprintdb.entities.*;
-import com.example.sprintdb.repository.AthleteRepository;
-import com.example.sprintdb.repository.GymTrainingRepository;
-import com.example.sprintdb.repository.TrackTrainingRepository;
-import com.example.sprintdb.repository.TrainingRepository;
+import com.example.sprintdb.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +19,8 @@ public class TrainingService {
     private final TrackTrainingRepository trackRepo;
     private final AthleteRepository athleteRepo;
 
-    // --- CREATE ---
+    // --- CREACIÓN ---
+
     @Transactional
     public GymTrainingDTO createGym(GymTrainingDTO dto) {
         Athlete athlete = athleteRepo.findById(dto.getAthleteId())
@@ -55,29 +50,25 @@ public class TrainingService {
         return convertToTrackDto(trackRepo.save(track));
     }
 
-    // --- READ (POLIMÓRFICO) ---
+    // --- LECTURA ---
+
     @Transactional(readOnly = true)
     public List<Object> listAllByAthlete(Long athleteId) {
-        // El repositorio base nos devuelve la mezcla de ambos tipos automáticamente
         return trainingRepo.findByAthleteIdOrderByDateTimeDesc(athleteId).stream()
                 .map(this::convertPolymorphic)
                 .collect(Collectors.toList());
     }
 
-    // --- UPDATE ---
-    // --- UPDATE CORREGIDO ---
+    // --- ACTUALIZACIÓN ---
 
     @Transactional
     public GymTrainingDTO updateGym(Long id, GymTrainingDTO dto) {
         GymTraining gym = gymRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Entrenamiento de Gimnasio no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Entrenamiento de Gym no encontrado"));
 
-        // 1. Actualizamos datos comunes y FEEDBACK
         gym.setDateTime(dto.getDateTime());
         gym.setDescription(dto.getDescription());
-        gym.setCompleted(dto.getCompleted());      // <--- FUNDAMENTAL
-
-        // 2. Actualizamos métricas específicas
+        gym.setCompleted(dto.getCompleted());
         gym.setSeries(dto.getSeries());
         gym.setRepetitions(dto.getRepetitions());
         gym.setWeight(dto.getWeight());
@@ -90,12 +81,9 @@ public class TrainingService {
         TrackTraining track = trackRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entrenamiento de Pista no encontrado"));
 
-        // 1. Actualizamos datos comunes y FEEDBACK
         track.setDateTime(dto.getDateTime());
         track.setDescription(dto.getDescription());
-        track.setCompleted(dto.getCompleted());      // <--- FUNDAMENTAL
-
-        // 2. Actualizamos métricas específicas
+        track.setCompleted(dto.getCompleted());
         track.setSeries(dto.getSeries());
         track.setRepetitions(dto.getRepetitions());
         track.setDistanceMeters(dto.getDistanceMeters());
@@ -103,33 +91,82 @@ public class TrainingService {
 
         return convertToTrackDto(trackRepo.save(track));
     }
-    // --- DELETE ---
+
+    // --- REPLICACIÓN (PLANIFICACIÓN SEMANAL) ---
+
+    @Transactional
+    public void replicate(Long sourceId, List<ReplicationDTO> copies) {
+        Training original = trainingRepo.findById(sourceId)
+                .orElseThrow(() -> new RuntimeException("Entrenamiento base no encontrado"));
+
+        for (ReplicationDTO entry : copies) {
+            if (original instanceof GymTraining) {
+                GymTraining source = (GymTraining) original;
+                GymTraining copy = new GymTraining();
+
+                // Clonamos ADN del original
+                copy.setDescription(source.getDescription());
+                copy.setAthlete(source.getAthlete());
+                copy.setPlace(source.getPlace());
+                copy.setSeries(source.getSeries());
+                copy.setRepetitions(source.getRepetitions());
+
+                // Aplicamos variaciones de la réplica
+                copy.setDateTime(entry.getNewDateTime());
+                copy.setWeight(entry.getNewValue()); // BigDecimal
+                copy.setCompleted(false);
+
+                gymRepo.save(copy);
+            }
+            else if (original instanceof TrackTraining) {
+                TrackTraining source = (TrackTraining) original;
+                TrackTraining copy = new TrackTraining();
+
+                copy.setDescription(source.getDescription());
+                copy.setAthlete(source.getAthlete());
+                copy.setPlace(source.getPlace());
+                copy.setSeries(source.getSeries());
+                copy.setRepetitions(source.getRepetitions());
+                copy.setDistanceMeters(source.getDistanceMeters());
+
+                copy.setDateTime(entry.getNewDateTime());
+                copy.setTimeSeconds(entry.getNewValue()); // BigDecimal
+                copy.setCompleted(false);
+
+                trackRepo.save(copy);
+            }
+        }
+    }
+
+    // --- ELIMINACIÓN ---
+
     @Transactional
     public void delete(Long id) {
-        // Al borrar el ID en la tabla base (Training), JPA borra automáticamente en la tabla hija
         if (!trainingRepo.existsById(id)) {
-            throw new RuntimeException("El entrenamiento con ID " + id + " no existe.");
+            throw new RuntimeException("ID inexistente: " + id);
         }
         trainingRepo.deleteById(id);
     }
+    @Transactional(readOnly = true)
+    public List<String> searchDescription(String q) {
+        // Si el query es nulo o vacío, devolvemos una lista vacía para evitar errores
+        if (q == null || q.trim().isEmpty()) {
+            return List.of();
+        }
+        return trainingRepo.findUniqueDescriptions(q);
+    }
+    // --- MAPPERS INTERNOS ---
 
-    // --- HELPER MAPPERS ---
     private void mapCommonToEntity(TrainingDTO dto, Training entity, Athlete athlete) {
         entity.setDateTime(dto.getDateTime());
         entity.setDescription(dto.getDescription());
         entity.setAthlete(athlete);
-
-        entity.setCompleted(dto.getCompleted());
-
-
+        entity.setCompleted(dto.getCompleted() != null ? dto.getCompleted() : false);
     }
 
     private Object convertPolymorphic(Training training) {
-        if (training instanceof GymTraining) {
-            return convertToGymDto((GymTraining) training);
-        } else if (training instanceof TrackTraining) {
-            return convertToTrackDto((TrackTraining) training);
-        }
+        if (training instanceof GymTraining) return convertToGymDto((GymTraining) training);
+        if (training instanceof TrackTraining) return convertToTrackDto((TrackTraining) training);
         return null;
     }
 
@@ -144,7 +181,6 @@ public class TrainingService {
         dto.setWeight(entity.getWeight());
         dto.setCompleted(entity.getCompleted());
         dto.setStats(mapStatsToDto(entity.getStats()));
-
         return dto;
     }
 
@@ -160,7 +196,6 @@ public class TrainingService {
         dto.setTimeSeconds(entity.getTimeSeconds());
         dto.setCompleted(entity.getCompleted());
         dto.setStats(mapStatsToDto(entity.getStats()));
-
         return dto;
     }
 
@@ -170,7 +205,7 @@ public class TrainingService {
                 .map(s -> new StatsDTO(
                         s.getId(),
                         s.getRpe(),
-                        s.getObservations(), // <--- Agregamos este cable de datos
+                        s.getObservations(),
                         s.getTraining().getId()
                 ))
                 .collect(Collectors.toList());
