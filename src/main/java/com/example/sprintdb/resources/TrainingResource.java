@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = {"http://localhost:5173", "https://sprintdb-frontend.onrender.com"})
+
 @RestController
 @RequestMapping("/api/trainings")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173") // Permitir conexión desde React
+//@CrossOrigin(origins = "http://localhost:5173") // Permitir conexión desde React
 public class TrainingResource {
 
     private final TrainingService trainingService;
